@@ -92,7 +92,7 @@ The frontend and API can be separate Vercel projects. MySQL must be hosted by an
    - `JWT_SECRET` (use a private random secret of at least 32 characters)
    - `CORS_ORIGIN=https://queue-less-ai-two.vercel.app`
    - `GEMINI_API_KEY` (optional)
-4. Deploy. The serverless handler is `backend/api/[...path].js`; verify `https://<backend-domain>/api/health`.
+4. Deploy. Vercel rewrites API routes through `backend/api/index.js`; verify `https://<backend-domain>/api/health`.
 
 ### Frontend on Vercel
 1. Create a second Vercel project from the same repository.
