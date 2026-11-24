@@ -35,7 +35,7 @@ app.use(
 );
 
 // CORS
-const corsOrigins = (process.env.CORS_ORIGIN || 'https://queueless-ai-frontend.vercel.app')
+const corsOrigins = (process.env.CORS_ORIGIN || 'https://queue-less-ai-two.vercel.app')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);

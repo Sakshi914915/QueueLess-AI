@@ -90,14 +90,14 @@ The frontend and API can be separate Vercel projects. MySQL must be hosted by an
    - `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_PORT`
    - `DB_SSL=true` if required by the database provider
    - `JWT_SECRET` (use a private random secret of at least 32 characters)
-   - `CORS_ORIGIN=https://queueless-ai-frontend.vercel.app`
+   - `CORS_ORIGIN=https://queue-less-ai-two.vercel.app`
    - `GEMINI_API_KEY` (optional)
 4. Deploy. The serverless handler is `backend/api/[...path].js`; verify `https://<backend-domain>/api/health`.
 
 ### Frontend on Vercel
 1. Create a second Vercel project from the same repository.
 2. Set **Root Directory** to `frontend` and **Framework Preset** to **Other**; no build command is required.
-3. `frontend/js/config.js` is configured to use `https://queue-less-ai-ktd1.vercel.app` as the backend URL.
+3. The frontend uses its own origin for the API, so frontend and backend can share the same Vercel domain.
 4. Commit and push that change, then deploy the frontend. Verify login/API requests in the browser.
 
 Vercel serverless functions do not keep a persistent Socket.IO connection, so API features work but live socket updates are disabled when the backend URL uses a `vercel.app` domain. For real-time updates, host the backend on a persistent Node.js service instead and set `BACKEND_URL_OVERRIDE` to that service URL.

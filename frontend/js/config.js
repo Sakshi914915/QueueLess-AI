@@ -3,7 +3,7 @@
  * Automatically handles localhost, Render, and Vercel environments
  */
 
-const BACKEND_URL_OVERRIDE = 'https://queue-less-ai-ktd1.vercel.app';
+const BACKEND_URL_OVERRIDE = '';
 
 const getDefaultBackendUrl = () => {
   // If hosted on Render or unified Express serving frontend
