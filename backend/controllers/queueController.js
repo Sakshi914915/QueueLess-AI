@@ -64,7 +64,7 @@ const getLiveQueue = async (req, res, next) => {
 const callNextToken = async (req, res, next) => {
   const conn = await pool.getConnection();
   try {
-    const { counter_id, service_id, branch_id } = req.body;
+    const { counter_id, service_id, branch_id, token_id } = req.body;
 
     if (!counter_id || !branch_id) {
       return errorResponse(res, 'Counter ID and Branch ID are required.', 400);
@@ -104,7 +104,7 @@ const callNextToken = async (req, res, next) => {
       );
     }
 
-    // 2. Find top eligible waiting token
+    // 2. Find top eligible waiting token (or specific token_id if requested)
     let query = `
       SELECT t.id, t.token_number, t.customer_id, t.service_id, t.branch_id, s.name as service_name
       FROM tokens t
@@ -113,7 +113,10 @@ const callNextToken = async (req, res, next) => {
     `;
     const params = [branch_id];
 
-    if (service_id) {
+    if (token_id) {
+      query += ' AND t.id = ?';
+      params.push(token_id);
+    } else if (service_id && service_id !== 'all') {
       query += ' AND t.service_id = ?';
       params.push(service_id);
     }

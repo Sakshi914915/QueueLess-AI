@@ -127,12 +127,18 @@
 
         <!-- Waiting Queue Table -->
         <div class="card card-custom p-4 border-0 shadow-sm mb-4">
-          <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <div>
               <h5 class="fw-bold mb-0">Waiting Queue Line</h5>
               <span class="text-muted small">Sorted transparently by priority weight (Emergency -> Disability -> Senior -> Normal) and FIFO creation time</span>
             </div>
-            <button class="btn btn-sm btn-outline-secondary" onclick="loadQueue()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+            <div class="d-flex align-items-center gap-2">
+              <label class="small text-muted mb-0 fw-semibold">Filter Service:</label>
+              <select id="queue-service-filter" class="form-select form-select-sm w-auto" onchange="onFilterChange()">
+                <option value="all">All Services</option>
+              </select>
+              <button class="btn btn-sm btn-outline-secondary" onclick="loadQueue()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+            </div>
           </div>
 
           <div class="table-responsive">
@@ -246,9 +252,35 @@
         : 'Counter Operator Desk';
     }
 
+    let selectedServiceFilter = 'all';
+
+    async function initBranchServices() {
+      try {
+        const res = await window.API.get(`/services?branch_id=${branchId}`);
+        const services = res.data || [];
+        const select = document.getElementById('queue-service-filter');
+        if (select) {
+          select.innerHTML = '<option value="all">All Services</option>' + 
+            services.map(s => `<option value="${s.id}">${s.name} (${s.code})</option>`).join('');
+          if (serviceId) {
+            select.value = serviceId;
+            selectedServiceFilter = String(serviceId);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching branch services:', err);
+      }
+    }
+
+    function onFilterChange() {
+      selectedServiceFilter = document.getElementById('queue-service-filter').value;
+      loadQueue();
+    }
+
     async function loadQueue() {
       try {
-        const res = await window.API.get(`/queue/${branchId}/${serviceId || 'all'}`);
+        const queryService = selectedServiceFilter || 'all';
+        const res = await window.API.get(`/queue/${branchId}/${queryService}`);
         const { servingTokens, waitingQueue, totalWaiting } = res.data;
 
         document.getElementById('stat-desk-waiting').textContent = totalWaiting;
@@ -347,10 +379,25 @@
 
     async function callNext() {
       try {
+        const queryService = selectedServiceFilter !== 'all' ? selectedServiceFilter : null;
         const res = await window.API.post('/queue/call-next', {
           counter_id: counterId,
           branch_id: branchId,
-          service_id: serviceId
+          service_id: queryService
+        });
+        window.API.showToast(res.message, 'success');
+        loadQueue();
+      } catch (err) {
+        window.API.showToast(err.message, 'warning');
+      }
+    }
+
+    async function callSpecificToken(tokenId) {
+      try {
+        const res = await window.API.post('/queue/call-next', {
+          counter_id: counterId,
+          branch_id: branchId,
+          token_id: tokenId
         });
         window.API.showToast(res.message, 'success');
         loadQueue();
@@ -461,6 +508,7 @@
     });
 
     document.addEventListener('DOMContentLoaded', () => {
+      initBranchServices();
       loadQueue();
       if (window.SOCKET) {
         window.SOCKET.joinBranch(branchId);

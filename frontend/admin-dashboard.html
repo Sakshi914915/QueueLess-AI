@@ -424,7 +424,7 @@
           tbody.innerHTML = serviceBreakdown.map(s => `
             <tr>
               <td class="fw-bold">${s.service_name}</td>
-              <td><span class="badge bg-primary-subtle text-primary">${s.code}</span></td>
+              <td><span class="badge bg-primary-subtle text-primary">${s.service_code || s.code || 'SVC'}</span></td>
               <td>~${s.avg_service_duration_min} min</td>
               <td class="fw-semibold">${s.total_tokens}</td>
               <td class="text-success">${s.completed_tokens}</td>

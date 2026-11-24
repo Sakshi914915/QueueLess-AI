@@ -62,6 +62,8 @@ async function runTests() {
     const healthRes = await request('GET', '/api/health');
     assert.strictEqual(healthRes.status, 200, 'Health endpoint should return 200');
     assert.strictEqual(healthRes.body.status, 'healthy');
+    const [timezoneRows] = await pool.query('SELECT @@session.time_zone AS time_zone');
+    assert.strictEqual(timezoneRows[0].time_zone, '+00:00', 'MySQL session timezone should match the UTC driver timezone');
     console.log('✅ Test 1 Passed: Health check is healthy and MySQL is connected.');
 
     // Test 2: User Login with Seeded Users
@@ -138,6 +140,9 @@ async function runTests() {
     for (const r of results) {
       assert.strictEqual(r.status, 201, 'Token generation should succeed');
       assert(r.body.data.token.token_number, 'Token number must exist');
+      const createdAt = Date.parse(r.body.data.token.created_at);
+      assert(Number.isFinite(createdAt), 'Token creation time must be a valid timestamp');
+      assert(Math.abs(Date.now() - createdAt) < 2 * 60 * 1000, 'Token creation time should match the current real-world time');
     }
 
     const tokenNumbers = results.map(r => r.body.data.token.token_number);
