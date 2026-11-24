@@ -76,21 +76,28 @@ The full application will be live at:
 
 ## 4. Production Deployment
 
-### Backend on Render (Web Service)
-1. Push repository to GitHub.
-2. In Render Dashboard, click **New + -> Web Service**.
-3. Set **Root Directory**: `backend`
-4. Set **Build Command**: `npm install`
-5. Set **Start Command**: `npm start`
-6. Add Environment Variables:
-   - `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_PORT` (Pointing to your hosted MySQL database)
-   - `JWT_SECRET`
-   - `CORS_ORIGIN` (Your Vercel domain or `*`)
-   - `GEMINI_API_KEY` (Your Google Gemini API key)
+The frontend and API can be separate Vercel projects. MySQL must be hosted by an external MySQL provider; Vercel does not run the database server.
+
+### Database
+1. Create a remotely accessible MySQL 8.0 database with your database provider.
+2. Import `database/schema.sql`, then run `backend`'s `npm run seed` with the production database variables if you want the demo data.
+3. Allow connections from your hosting provider as required. Set `DB_SSL=true` if your provider requires TLS.
+
+### Backend API on Vercel
+1. Import this GitHub repository as a Vercel project.
+2. Set **Root Directory** to `backend` and **Framework Preset** to **Other**.
+3. Add these environment variables in Vercel (Production, Preview, and Development as needed):
+   - `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_PORT`
+   - `DB_SSL=true` if required by the database provider
+   - `JWT_SECRET` (use a private random secret of at least 32 characters)
+   - `CORS_ORIGIN=https://queueless-ai-frontend.vercel.app`
+   - `GEMINI_API_KEY` (optional)
+4. Deploy. The serverless handler is `backend/api/[...path].js`; verify `https://<backend-domain>/api/health`.
 
 ### Frontend on Vercel
-1. In Vercel Dashboard, click **Add New -> Project**.
-2. Select your repository and set **Root Directory** to `frontend`.
-3. Set **Framework Preset**: Other.
-4. Deploy!
-5. In `frontend/js/config.js`, verify `BACKEND_URL` points to your deployed Render URL.
+1. Create a second Vercel project from the same repository.
+2. Set **Root Directory** to `frontend` and **Framework Preset** to **Other**; no build command is required.
+3. `frontend/js/config.js` is configured to use `https://queue-less-ai-ktd1.vercel.app` as the backend URL.
+4. Commit and push that change, then deploy the frontend. Verify login/API requests in the browser.
+
+Vercel serverless functions do not keep a persistent Socket.IO connection, so API features work but live socket updates are disabled when the backend URL uses a `vercel.app` domain. For real-time updates, host the backend on a persistent Node.js service instead and set `BACKEND_URL_OVERRIDE` to that service URL.

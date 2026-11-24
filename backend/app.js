@@ -35,11 +35,15 @@ app.use(
 );
 
 // CORS
-const corsOrigins = process.env.CORS_ORIGIN === '*' ? '*' : (process.env.CORS_ORIGIN || '').split(',');
+const corsOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const allowAnyOrigin = corsOrigins.includes('*');
 app.use(
   cors({
-    origin: corsOrigins.length === 1 && corsOrigins[0] === '*' ? '*' : corsOrigins,
-    credentials: true,
+    origin: allowAnyOrigin ? '*' : corsOrigins,
+    credentials: !allowAnyOrigin,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
   })

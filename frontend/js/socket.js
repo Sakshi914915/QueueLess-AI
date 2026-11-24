@@ -5,6 +5,10 @@
 let socketInstance = null;
 
 const initSocket = () => {
+  if (window.APP_CONFIG.REALTIME_ENABLED === false) {
+    return null;
+  }
+
   if (typeof io === 'undefined') {
     console.warn('[Socket] Socket.io client script not loaded.');
     return null;
@@ -63,7 +67,7 @@ window.SOCKET = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (typeof io !== 'undefined') {
+  if (typeof io !== 'undefined' && window.APP_CONFIG.REALTIME_ENABLED !== false) {
     initSocket();
   }
 });

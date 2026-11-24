@@ -3,7 +3,9 @@
  * Automatically handles localhost, Render, and Vercel environments
  */
 
-const getBackendUrl = () => {
+const BACKEND_URL_OVERRIDE = 'https://queue-less-ai-ktd1.vercel.app';
+
+const getDefaultBackendUrl = () => {
   // If hosted on Render or unified Express serving frontend
   if (window.location.port === '5000') {
     return window.location.origin;
@@ -16,12 +18,13 @@ const getBackendUrl = () => {
   return window.location.origin;
 };
 
-const BACKEND_URL = getBackendUrl();
+const BACKEND_URL = (BACKEND_URL_OVERRIDE || getDefaultBackendUrl()).replace(/\/+$/, '');
 const API_BASE_URL = `${BACKEND_URL}/api`;
 const SOCKET_URL = BACKEND_URL;
 
 window.APP_CONFIG = {
   BACKEND_URL,
   API_BASE_URL,
-  SOCKET_URL
+  SOCKET_URL,
+  REALTIME_ENABLED: !BACKEND_URL.includes('.vercel.app')
 };

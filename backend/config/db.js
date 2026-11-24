@@ -8,6 +8,7 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'queueless_ai_db',
   port: parseInt(process.env.DB_PORT, 10) || 3306,
+  ssl: process.env.DB_SSL === 'true' ? {} : undefined,
   waitForConnections: true,
   connectionLimit: 15,
   queueLimit: 0,
