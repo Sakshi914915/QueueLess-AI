@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Dashboard - QueueLess AI</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+
+  <div class="dashboard-wrapper">
+    <!-- Sidebar -->
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-header">
+        <a class="navbar-brand text-white" href="index.html">
+          <i class="bi bi-clock-history text-primary fs-3"></i>
+          <span>QueueLess <span class="text-primary">AI</span></span>
+        </a>
+      </div>
+      <ul class="sidebar-nav">
+        <li class="sidebar-item">
+          <a href="user-dashboard.html" class="sidebar-link active">
+            <i class="bi bi-speedometer2"></i>
+            <span>Overview</span>
+          </a>
+        </li>
+        <li class="sidebar-item">
+          <a href="organizations.html" class="sidebar-link">
+            <i class="bi bi-buildings"></i>
+            <span>Find Organizations</span>
+          </a>
+        </li>
+        <li class="sidebar-item">
+          <a href="appointments.html" class="sidebar-link">
+            <i class="bi bi-calendar3"></i>
+            <span>Appointments</span>
+          </a>
+        </li>
+        <li class="sidebar-item">
+          <a href="public-queue.html" class="sidebar-link">
+            <i class="bi bi-display"></i>
+            <span>Public TV Screen</span>
+          </a>
+        </li>
+      </ul>
+      <div class="sidebar-footer">
+        <div class="d-flex align-items-center justify-content-between">
+          <div class="text-truncate me-2">
+            <div class="fw-bold text-white text-truncate" id="sidebar-user-name">User</div>
+            <div class="text-muted small text-truncate" id="sidebar-user-email">email</div>
+          </div>
+          <button class="btn btn-sm btn-outline-danger p-1" onclick="window.AUTH.logout()" title="Logout"><i class="bi bi-box-arrow-right"></i></button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="dashboard-main">
+      <!-- Topbar -->
+      <header class="dashboard-topbar">
+        <div class="d-flex align-items-center gap-3">
+          <button class="btn btn-sm btn-outline-secondary d-lg-none" onclick="document.querySelector('.dashboard-sidebar').classList.toggle('show')">
+            <i class="bi bi-list fs-5"></i>
+          </button>
+          <h5 class="fw-bold mb-0">Customer Portal</h5>
+        </div>
+
+        <div class="d-flex align-items-center gap-3">
+          <!-- Notification Bell -->
+          <div class="dropdown">
+            <button class="btn btn-sm btn-light border position-relative" type="button" data-bs-toggle="dropdown" id="notif-bell-btn">
+              <i class="bi bi-bell"></i>
+              <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" id="notif-badge">0</span>
+            </button>
+            <div class="dropdown-menu dropdown-menu-end shadow-sm p-2" style="width: 320px; max-height: 380px; overflow-y: auto;" id="notif-dropdown">
+              <div class="d-flex justify-content-between align-items-center px-2 py-1 border-bottom">
+                <span class="fw-bold small">Notifications</span>
+                <button class="btn btn-link btn-sm p-0 text-decoration-none" style="font-size:0.75rem;" onclick="markAllNotificationsRead()">Mark all read</button>
+              </div>
+              <div id="notif-list" class="py-2 small text-muted text-center">No new notifications</div>
+            </div>
+          </div>
+
+          <a href="organizations.html" class="btn btn-primary btn-sm d-flex align-items-center gap-1">
+            <i class="bi bi-plus-circle"></i>
+            <span>Get New Token</span>
+          </a>
+        </div>
+      </header>
+
+      <div class="dashboard-content">
+        <!-- Live Active Token Alert Banner -->
+        <div id="active-tokens-section">
+          <!-- Dynamically populated -->
+        </div>
+
+        <!-- Metric Stat Cards -->
+        <div class="row g-4 mb-4">
+          <div class="col-sm-6 col-xl-3">
+            <div class="stat-card">
+              <div class="stat-icon stat-blue"><i class="bi bi-ticket-perforated"></i></div>
+              <div>
+                <div class="stat-value" id="stat-active-count">0</div>
+                <div class="stat-label">Active Waiting Tokens</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-xl-3">
+            <div class="stat-card">
+              <div class="stat-icon stat-green"><i class="bi bi-check2-circle"></i></div>
+              <div>
+                <div class="stat-value" id="stat-completed-count">0</div>
+                <div class="stat-label">Completed Visits</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-xl-3">
+            <div class="stat-card">
+              <div class="stat-icon stat-yellow"><i class="bi bi-calendar-event"></i></div>
+              <div>
+                <div class="stat-value" id="stat-appointments-count">0</div>
+                <div class="stat-label">Upcoming Appointments</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-xl-3">
+            <div class="stat-card">
+              <div class="stat-icon stat-purple"><i class="bi bi-chat-heart"></i></div>
+              <div>
+                <div class="stat-value" id="stat-reviews-count">0</div>
+                <div class="stat-label">Reviews Submitted</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Token History Table -->
+        <div class="card card-custom p-4 border-0 shadow-sm mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold mb-0">Token & Queue History</h5>
+            <button class="btn btn-sm btn-outline-secondary" onclick="loadDashboardData()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light small text-uppercase text-muted">
+                <tr>
+                  <th>Token #</th>
+                  <th>Service Desk</th>
+                  <th>Organization & Branch</th>
+                  <th>Generated</th>
+                  <th>Status</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="token-history-table">
+                <tr>
+                  <td colspan="6" class="text-center py-4 text-muted">Loading tokens from MySQL...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/socket.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/ai-assistant.js"></script>
+  <script>
+    if (!window.AUTH.requireRole('customer')) {
+      // Stopped by guard
+    }
+
+    const user = window.AUTH.getUser();
+    if (user) {
+      document.getElementById('sidebar-user-name').textContent = user.full_name || 'Customer';
+      document.getElementById('sidebar-user-email').textContent = user.email;
+    }
+
+    async function loadDashboardData() {
+      try {
+        const res = await window.API.get('/tokens/my-tokens');
+        const { activeTokens, pastTokens } = res.data;
+
+        // Stat widgets
+        document.getElementById('stat-active-count').textContent = activeTokens.length;
+        document.getElementById('stat-completed-count').textContent = pastTokens.filter(t => t.status === 'completed').length;
+        document.getElementById('stat-reviews-count').textContent = pastTokens.filter(t => t.feedback_id).length;
+
+        // Render Active Tokens Banner
+        const activeContainer = document.getElementById('active-tokens-section');
+        if (activeTokens.length > 0) {
+          activeContainer.innerHTML = activeTokens.map(t => `
+            <div class="active-token-card mb-4">
+              <div class="row align-items-center g-4">
+                <div class="col-md-7">
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge badge-status ${t.status === 'called' ? 'badge-called' : 'badge-waiting'}">${t.status}</span>
+                    <span class="badge bg-white text-dark border">${t.organization_name} • ${t.branch_name}</span>
+                  </div>
+                  <div class="token-big-badge">${t.token_number}</div>
+                  <h5 class="fw-bold text-dark mb-1">${t.service_name}</h5>
+                  <div class="small text-muted"><i class="bi bi-clock me-1"></i>Generated: ${new Date(t.created_at).toLocaleTimeString()}</div>
+                </div>
+
+                <div class="col-md-5 text-md-end">
+                  <div class="bg-white p-3 rounded-3 shadow-sm border mb-3 d-inline-block text-start" style="min-width: 240px;">
+                    <div class="d-flex justify-content-between small text-muted mb-1">
+                      <span>Queue Position:</span>
+                      <strong class="text-primary fs-6">#${t.queue_position}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between small text-muted mb-2">
+                      <span>Est. Wait Time:</span>
+                      <strong class="text-success fs-6">~${t.estimated_wait_minutes} min</strong>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                      <div class="progress-bar bg-primary" style="width: ${Math.max(10, 100 - (t.queue_position * 20))}%"></div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <a href="token-details.html?id=${t.id}" class="btn btn-primary btn-sm me-2">
+                      <i class="bi bi-broadcast me-1"></i>Live Tracking & QR
+                    </a>
+                    ${t.status === 'waiting' ? `
+                      <button class="btn btn-outline-danger btn-sm" onclick="cancelToken(${t.id})">
+                        Cancel
+                      </button>
+                    ` : ''}
+                  </div>
+                </div>
+              </div>
+            </div>
+          `).join('');
+        } else {
+          activeContainer.innerHTML = `
+            <div class="card card-custom p-4 mb-4 text-center border-0 shadow-sm bg-white">
+              <div class="stat-icon stat-blue mx-auto mb-2"><i class="bi bi-ticket-detailed"></i></div>
+              <h5 class="fw-bold mb-1">No Active Queue Tokens</h5>
+              <p class="text-muted small mb-3">You are not currently in any waiting queues.</p>
+              <div><a href="organizations.html" class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>Find an Organization to Join</a></div>
+            </div>
+          `;
+        }
+
+        // Render Table History
+        const allTokens = [...activeTokens, ...pastTokens];
+        const tbody = document.getElementById('token-history-table');
+
+        if (allTokens.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No token records yet.</td></tr>';
+          return;
+        }
+
+        const badgeClass = {
+          waiting: 'badge-waiting',
+          called: 'badge-called',
+          serving: 'badge-serving',
+          completed: 'badge-completed',
+          cancelled: 'badge-cancelled',
+          skipped: 'badge-warning',
+          no_show: 'badge-no_show'
+        };
+
+        tbody.innerHTML = allTokens.map(t => `
+          <tr>
+            <td class="fw-bold text-primary">${t.token_number}</td>
+            <td>${t.service_name}</td>
+            <td class="small text-muted">${t.organization_name} (${t.branch_name})</td>
+            <td class="small text-muted">${new Date(t.created_at).toLocaleDateString()} ${new Date(t.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+            <td><span class="badge badge-status ${badgeClass[t.status] || 'bg-secondary'}">${t.status}</span></td>
+            <td class="text-end">
+              <a href="token-details.html?id=${t.id}" class="btn btn-sm btn-outline-primary py-0 px-2">View</a>
+              ${t.status === 'completed' && !t.feedback_id ? `
+                <a href="token-details.html?id=${t.id}#feedback" class="btn btn-sm btn-outline-warning py-0 px-2 ms-1"><i class="bi bi-star me-1"></i>Review</a>
+              ` : ''}
+            </td>
+          </tr>
+        `).join('');
+
+      } catch (err) {
+        window.API.showToast(err.message || 'Error fetching user data.', 'error');
+      }
+    }
+
+    async function loadNotifications() {
+      try {
+        const res = await window.API.get('/notifications');
+        const { notifications, unreadCount } = res.data;
+
+        const badge = document.getElementById('notif-badge');
+        if (unreadCount > 0) {
+          badge.textContent = unreadCount;
+          badge.classList.remove('d-none');
+        } else {
+          badge.classList.add('d-none');
+        }
+
+        const list = document.getElementById('notif-list');
+        if (notifications.length === 0) {
+          list.innerHTML = '<div class="p-2 text-muted text-center small">No notifications yet.</div>';
+          return;
+        }
+
+        list.innerHTML = notifications.slice(0, 8).map(n => `
+          <div class="p-2 border-bottom ${n.is_read ? '' : 'bg-light'}">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <strong class="text-dark" style="font-size:0.8rem;">${n.title}</strong>
+              <span class="text-muted" style="font-size:0.65rem;">${new Date(n.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+            </div>
+            <div class="text-muted" style="font-size:0.75rem;">${n.message}</div>
+          </div>
+        `).join('');
+      } catch (err) {
+        console.error('Failed to load notifications:', err);
+      }
+    }
+
+    async function markAllNotificationsRead() {
+      try {
+        await window.API.put('/notifications/read-all');
+        loadNotifications();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function cancelToken(id) {
+      if (!confirm('Are you sure you want to cancel this token?')) return;
+      try {
+        await window.API.post(`/tokens/${id}/cancel`);
+        window.API.showToast('Token cancelled.', 'info');
+        loadDashboardData();
+      } catch (err) {
+        window.API.showToast(err.message, 'error');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadDashboardData();
+      loadNotifications();
+      window.initAIAssistant('customer');
+
+      const s = window.SOCKET ? window.SOCKET.get() : null;
+      if (s) {
+        s.on('queue_updated', () => loadDashboardData());
+        s.on('token_status_changed', () => loadDashboardData());
+        s.on('new_notification', () => {
+          loadNotifications();
+          loadDashboardData();
+        });
+      }
+    });
+  </script>
+</body>
+</html>

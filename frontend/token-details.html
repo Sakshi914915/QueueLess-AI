@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Token Tracker - QueueLess AI</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body class="bg-light">
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-light bg-white border-bottom py-3 sticky-top">
+    <div class="container">
+      <a class="navbar-brand" href="index.html">
+        <i class="bi bi-clock-history text-primary fs-3"></i>
+        <span>QueueLess <span class="text-primary">AI</span></span>
+      </a>
+      <div class="d-flex align-items-center gap-3">
+        <a href="user-dashboard.html" class="btn btn-outline-primary btn-sm"><i class="bi bi-speedometer2 me-1"></i>My Dashboard</a>
+        <div id="nav-user-area"></div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-lg-7">
+        
+        <!-- Main Token Card -->
+        <div class="card card-custom p-4 p-md-5 border-0 shadow-lg position-relative" id="token-card-container">
+          <div class="text-center py-5">
+            <span class="spinner-border text-primary"></span>
+            <div class="mt-2 text-muted">Connecting to live queue stream...</div>
+          </div>
+        </div>
+
+        <!-- Feedback Card (Revealed when token status = completed) -->
+        <div class="card card-custom p-4 mt-4 border-0 shadow-sm d-none" id="feedback-card">
+          <h5 class="fw-bold mb-2"><i class="bi bi-star-fill text-warning me-2"></i>Rate Your Experience</h5>
+          <p class="text-muted small mb-3">Your service has been completed. Please take 10 seconds to share your feedback.</p>
+          <form id="feedback-form">
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Rating</label>
+              <div class="d-flex gap-3 fs-3 text-warning" id="star-rating">
+                <i class="bi bi-star rating-star" data-rating="1" style="cursor:pointer;"></i>
+                <i class="bi bi-star rating-star" data-rating="2" style="cursor:pointer;"></i>
+                <i class="bi bi-star rating-star" data-rating="3" style="cursor:pointer;"></i>
+                <i class="bi bi-star rating-star" data-rating="4" style="cursor:pointer;"></i>
+                <i class="bi bi-star rating-star" data-rating="5" style="cursor:pointer;"></i>
+              </div>
+              <input type="hidden" id="selected-rating" value="5">
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Comments / Suggestions</label>
+              <textarea id="feedback-comments" class="form-control" rows="2" placeholder="How was the service? (optional)"></textarea>
+            </div>
+            <button type="submit" class="btn btn-success btn-sm px-4 fw-semibold">Submit Review</button>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <!-- QRCode.js for client-side QR generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/socket.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/ai-assistant.js"></script>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const tokenId = urlParams.get('id');
+    let currentToken = null;
+
+    if (!tokenId) {
+      alert('No Token ID specified in URL.');
+      window.location.href = 'user-dashboard.html';
+    }
+
+    async function loadTokenDetails() {
+      try {
+        const res = await window.API.get(`/tokens/${tokenId}`);
+        currentToken = res.data;
+        renderTokenUI(currentToken);
+
+        // Join real-time WebSocket rooms
+        if (window.SOCKET) {
+          window.SOCKET.joinToken(tokenId);
+          window.SOCKET.joinBranch(currentToken.branch_id);
+        }
+      } catch (err) {
+        document.getElementById('token-card-container').innerHTML = `
+          <div class="alert alert-danger">Error: ${err.message}</div>
+          <div class="text-center mt-3"><a href="user-dashboard.html" class="btn btn-primary btn-sm">Go to My Dashboard</a></div>
+        `;
+      }
+    }
+
+    function renderTokenUI(t) {
+      const isCompleted = t.status === 'completed';
+      const isCancelled = t.status === 'cancelled';
+      const isCalled = t.status === 'called';
+      const isServing = t.status === 'serving';
+
+      const statusBadges = {
+        waiting: 'badge-waiting',
+        called: 'badge-called',
+        serving: 'badge-serving',
+        completed: 'badge-completed',
+        cancelled: 'badge-cancelled',
+        skipped: 'badge-warning',
+        no_show: 'badge-no_show'
+      };
+
+      const container = document.getElementById('token-card-container');
+      container.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center pb-3 border-bottom mb-4">
+          <div>
+            <span class="badge bg-primary-subtle text-primary fw-bold px-2 py-1">${t.organization_name}</span>
+            <div class="small text-muted mt-1"><i class="bi bi-geo-alt me-1"></i>${t.branch_name}</div>
+          </div>
+          <span class="badge badge-status ${statusBadges[t.status] || 'bg-secondary'}">${t.status}</span>
+        </div>
+
+        <div class="text-center mb-4">
+          <div class="text-muted small fw-medium text-uppercase">YOUR TOKEN NUMBER</div>
+          <div class="display-2 fw-black text-primary my-1">${t.token_number}</div>
+          <h5 class="fw-bold text-dark">${t.service_name}</h5>
+          ${t.priority_type !== 'normal' ? `<span class="badge bg-warning text-dark text-uppercase mt-1"><i class="bi bi-star-fill me-1"></i>Priority: ${t.priority_type}</span>` : ''}
+        </div>
+
+        ${!isCompleted && !isCancelled ? `
+          <div class="row g-3 text-center my-3">
+            <div class="col-4">
+              <div class="p-3 bg-light rounded-3 border">
+                <div class="small text-muted">Queue Position</div>
+                <div class="fs-3 fw-bold text-primary">#${t.queue_position}</div>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="p-3 bg-light rounded-3 border">
+                <div class="small text-muted">People Ahead</div>
+                <div class="fs-3 fw-bold text-dark">${t.people_ahead}</div>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="p-3 bg-light rounded-3 border">
+                <div class="small text-muted">Estimated Wait</div>
+                <div class="fs-3 fw-bold text-success">~${t.estimated_wait_minutes} min</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-primary-subtle p-3 rounded-3 my-3 small text-primary d-flex align-items-center gap-2">
+            <i class="bi bi-calculator fs-5"></i>
+            <div>
+              <strong>Rule-Based Calculation:</strong> ${t.rule_based_calculation.formula}<br>
+              <span class="text-muted" style="font-size:0.75rem;">${t.rule_based_calculation.disclaimer}</span>
+            </div>
+          </div>
+
+          ${isCalled ? `
+            <div class="alert alert-primary p-3 rounded-3 text-center fw-bold animate-pulse">
+              <i class="bi bi-megaphone-fill me-2 fs-5"></i>YOUR TURN! Please proceed to ${t.counter_name || 'Counter Desk'}.
+            </div>
+          ` : ''}
+          ${isServing ? `
+            <div class="alert alert-success p-3 rounded-3 text-center fw-bold">
+              <i class="bi bi-check-circle-fill me-2 fs-5"></i>Now Being Served at ${t.counter_name || 'Counter Desk'}.
+            </div>
+          ` : ''}
+        ` : ''}
+
+        <!-- QR Code for Branch Check-in / Verification -->
+        <div class="text-center my-4 p-3 bg-white border rounded-3">
+          <div class="small fw-semibold text-muted mb-2 text-uppercase">DIGITAL PASS QR CODE</div>
+          <div id="qrcode-container" class="d-flex justify-content-center my-2"></div>
+          <div class="small text-muted mt-2">Scan at entrance kiosk or present to counter operator</div>
+          <div class="badge bg-light text-secondary font-monospace" style="font-size:0.75rem;">HASH: ${t.qr_code_hash.substring(0, 16)}...</div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+          <span class="small text-muted"><i class="bi bi-clock me-1"></i>Generated: ${new Date(t.created_at).toLocaleTimeString()}</span>
+          ${t.status === 'waiting' ? `
+            <button class="btn btn-outline-danger btn-sm" onclick="cancelCurrentToken()">
+              <i class="bi bi-x-circle me-1"></i>Cancel Token
+            </button>
+          ` : ''}
+        </div>
+      `;
+
+      // Generate QR Code
+      const qrEl = document.getElementById('qrcode-container');
+      if (qrEl) {
+        qrEl.innerHTML = '';
+        new QRCode(qrEl, {
+          text: `${window.APP_CONFIG.BACKEND_URL}/api/tokens/verify-qr/${t.qr_code_hash}`,
+          width: 140,
+          height: 140,
+          colorDark: '#0f172a',
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      }
+
+      // If completed, show feedback card
+      if (isCompleted) {
+        document.getElementById('feedback-card').classList.remove('d-none');
+      }
+    }
+
+    async function cancelCurrentToken() {
+      if (!confirm('Are you sure you want to cancel this queue token?')) return;
+      try {
+        await window.API.post(`/tokens/${tokenId}/cancel`, { reason: 'User requested cancellation' });
+        window.API.showToast('Token cancelled.', 'info');
+        loadTokenDetails();
+      } catch (err) {
+        window.API.showToast(err.message || 'Failed to cancel token.', 'error');
+      }
+    }
+
+    // Star rating interaction
+    document.querySelectorAll('.rating-star').forEach(star => {
+      star.addEventListener('click', function() {
+        const rating = parseInt(this.getAttribute('data-rating'), 10);
+        document.getElementById('selected-rating').value = rating;
+        document.querySelectorAll('.rating-star').forEach(s => {
+          const r = parseInt(s.getAttribute('data-rating'), 10);
+          if (r <= rating) {
+            s.className = 'bi bi-star-fill rating-star';
+          } else {
+            s.className = 'bi bi-star rating-star';
+          }
+        });
+      });
+    });
+
+    document.getElementById('feedback-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const rating = document.getElementById('selected-rating').value;
+      const comments = document.getElementById('feedback-comments').value.trim();
+
+      try {
+        await window.API.post('/feedback', {
+          token_id: tokenId,
+          rating,
+          comments
+        });
+        window.API.showToast('Thank you for rating your visit!', 'success');
+        document.getElementById('feedback-card').innerHTML = `
+          <div class="alert alert-success mb-0"><i class="bi bi-check-circle me-2"></i>Feedback submitted successfully!</div>
+        `;
+      } catch (err) {
+        window.API.showToast(err.message || 'Feedback submission failed.', 'error');
+      }
+    });
+
+    // Real-time socket event listener for automatic updates without page refresh
+    document.addEventListener('DOMContentLoaded', () => {
+      loadTokenDetails();
+      window.initAIAssistant('customer');
+
+      const s = window.SOCKET ? window.SOCKET.get() : null;
+      if (s) {
+        s.on('token_status_changed', (payload) => {
+          console.log('[Live Token Event] Refreshing token state:', payload);
+          loadTokenDetails();
+        });
+        s.on('queue_updated', () => {
+          loadTokenDetails();
+        });
+      }
+    });
+  </script>
+</body>
+</html>

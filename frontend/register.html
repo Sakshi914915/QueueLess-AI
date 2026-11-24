@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - QueueLess AI</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-light d-flex flex-column min-vh-100 justify-content-between">
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-light bg-white border-bottom py-3">
+    <div class="container">
+      <a class="navbar-brand" href="index.html">
+        <i class="bi bi-clock-history text-primary fs-3"></i>
+        <span>QueueLess <span class="text-primary">AI</span></span>
+      </a>
+      <a href="login.html" class="btn btn-outline-primary btn-sm">Already Registered? Sign In</a>
+    </div>
+  </nav>
+
+  <!-- Register Container -->
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-7 col-lg-6">
+        <div class="card card-custom p-4 p-md-5 border-0 shadow">
+          <div class="text-center mb-4">
+            <h3 class="fw-bold">Create Account</h3>
+            <p class="text-muted small">Join QueueLess AI as a Customer or Register Your Organization</p>
+          </div>
+
+          <!-- Account Type Tabs -->
+          <ul class="nav nav-pills nav-fill mb-4 p-1 bg-light rounded-3" id="role-tabs">
+            <li class="nav-item">
+              <button class="nav-link active fw-semibold" id="tab-customer" type="button" onclick="switchRole('customer')">
+                <i class="bi bi-person me-1"></i> Customer / User
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link fw-semibold" id="tab-org" type="button" onclick="switchRole('org_admin')">
+                <i class="bi bi-building me-1"></i> Organization Admin
+              </button>
+            </li>
+          </ul>
+
+          <form id="register-form">
+            <input type="hidden" id="reg-role" value="customer">
+
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Full Name / Contact Person</label>
+              <input type="text" id="reg-name" class="form-control" placeholder="e.g. John Doe" required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Email Address</label>
+              <input type="email" id="reg-email" class="form-control" placeholder="name@domain.com" required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Phone Number</label>
+              <input type="tel" id="reg-phone" class="form-control" placeholder="+91 9876543210">
+            </div>
+
+            <!-- Organization Specific Fields (Shown when Org Admin is selected) -->
+            <div id="org-fields" class="d-none">
+              <div class="mb-3">
+                <label class="form-label small fw-semibold">Organization Name</label>
+                <input type="text" id="reg-org-name" class="form-control" placeholder="e.g. Metro Multispeciality Hospital">
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label small fw-semibold">Industry / Category</label>
+                <select id="reg-org-category" class="form-select">
+                  <option value="hospital">Hospital & Clinic</option>
+                  <option value="bank">Bank & Financial Hub</option>
+                  <option value="college">College & University</option>
+                  <option value="government">Government & Public Service</option>
+                  <option value="diagnostic">Diagnostic Laboratory</option>
+                  <option value="customer_service">Customer Service Desk</option>
+                  <option value="other">Other Industry</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label small fw-semibold">Password</label>
+              <input type="password" id="reg-password" class="form-control" placeholder="Minimum 6 characters" required minlength="6">
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold" id="btn-register">
+              <span id="btn-text">Register Account</span>
+              <span id="btn-spinner" class="spinner-border spinner-border-sm d-none"></span>
+            </button>
+          </form>
+
+          <div class="text-center mt-4">
+            <span class="text-muted small">Already have an account? </span>
+            <a href="login.html" class="small fw-semibold">Sign in</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="py-3 bg-white border-top text-center text-muted small">
+    © 2026 QueueLess AI. All rights reserved.
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    function switchRole(role) {
+      document.getElementById('reg-role').value = role;
+      const tabCustomer = document.getElementById('tab-customer');
+      const tabOrg = document.getElementById('tab-org');
+      const orgFields = document.getElementById('org-fields');
+      const orgNameInput = document.getElementById('reg-org-name');
+
+      if (role === 'org_admin') {
+        tabCustomer.classList.remove('active');
+        tabOrg.classList.add('active');
+        orgFields.classList.remove('d-none');
+        orgNameInput.required = true;
+      } else {
+        tabOrg.classList.remove('active');
+        tabCustomer.classList.add('active');
+        orgFields.classList.add('d-none');
+        orgNameInput.required = false;
+      }
+    }
+
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const role = document.getElementById('reg-role').value;
+      const full_name = document.getElementById('reg-name').value.trim();
+      const email = document.getElementById('reg-email').value.trim();
+      const phone = document.getElementById('reg-phone').value.trim();
+      const password = document.getElementById('reg-password').value;
+      const organization_name = document.getElementById('reg-org-name').value.trim();
+      const organization_category = document.getElementById('reg-org-category').value;
+
+      const btnText = document.getElementById('btn-text');
+      const btnSpinner = document.getElementById('btn-spinner');
+      const submitBtn = document.getElementById('btn-register');
+
+      try {
+        btnText.classList.add('d-none');
+        btnSpinner.classList.remove('d-none');
+        submitBtn.disabled = true;
+
+        const payload = {
+          role,
+          full_name,
+          email,
+          phone,
+          password
+        };
+
+        if (role === 'org_admin') {
+          payload.organization_name = organization_name;
+          payload.organization_category = organization_category;
+        }
+
+        const res = await window.API.post('/auth/register', payload);
+
+        if (res.success && res.data) {
+          window.AUTH.setUser(res.data.token, res.data.user);
+          window.API.showToast('Account created successfully!', 'success', 2000);
+          setTimeout(() => {
+            window.AUTH.redirectByRole(res.data.user.role);
+          }, 800);
+        }
+      } catch (err) {
+        window.API.showToast(err.message || 'Registration failed.', 'error');
+        btnText.classList.remove('d-none');
+        btnSpinner.classList.add('d-none');
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Branch & Services - QueueLess AI</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-light">
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top py-3">
+    <div class="container">
+      <a class="navbar-brand" href="index.html">
+        <i class="bi bi-clock-history text-primary fs-3"></i>
+        <span>QueueLess <span class="text-primary">AI</span></span>
+      </a>
+      <div class="d-flex align-items-center gap-3">
+        <a href="organizations.html" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>All Organizations</a>
+        <div id="nav-user-area"></div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Organization Header -->
+  <div class="bg-white border-bottom py-4 mb-4">
+    <div class="container" id="org-header">
+      <div class="spinner-border spinner-border-sm text-primary"></div> Loading organization details...
+    </div>
+  </div>
+
+  <div class="container pb-5">
+    <div class="row g-4" id="branches-container">
+      <!-- Branches & Service Desks Rendered Dynamically -->
+    </div>
+  </div>
+
+  <!-- Modal: Generate Digital Token -->
+  <div class="modal fade" id="tokenModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header border-bottom bg-light">
+          <h5 class="modal-title fw-bold" id="modal-service-name">Generate Queue Token</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="text-muted small mb-3" id="modal-service-desc">
+            Please select your priority category and confirm to receive a digital queue token.
+          </p>
+
+          <form id="token-form">
+            <input type="hidden" id="token-branch-id">
+            <input type="hidden" id="token-service-id">
+
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Priority Category</label>
+              <select id="token-priority" class="form-select" onchange="togglePriorityReason()">
+                <option value="normal">Normal (Standard Queue)</option>
+                <option value="senior">Senior Citizen (60+ Years)</option>
+                <option value="disability">Differently Abled (Divyangjan)</option>
+                <option value="emergency">Emergency / Medical Urgency</option>
+              </select>
+            </div>
+
+            <div class="mb-3 d-none" id="priority-reason-group">
+              <label class="form-label small fw-semibold">Reason for Priority Access</label>
+              <input type="text" id="token-priority-reason" class="form-control" placeholder="Brief explanation for verification">
+            </div>
+
+            <div class="bg-light p-3 rounded-3 mb-3 small text-muted border">
+              <i class="bi bi-info-circle text-primary me-1"></i>
+              Your estimated wait time will be computed using transparent queue formulas based on eligible customers ahead and active counters.
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold" id="btn-submit-token">
+              <span id="token-btn-text">Confirm & Generate Token</span>
+              <span id="token-btn-spinner" class="spinner-border spinner-border-sm d-none"></span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/socket.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/ai-assistant.js"></script>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const orgId = urlParams.get('orgId') || '1';
+    let tokenModalInstance = null;
+
+    function togglePriorityReason() {
+      const priority = document.getElementById('token-priority').value;
+      const group = document.getElementById('priority-reason-group');
+      if (priority !== 'normal') {
+        group.classList.remove('d-none');
+      } else {
+        group.classList.add('d-none');
+      }
+    }
+
+    function openTokenModal(branchId, serviceId, serviceName, serviceDesc) {
+      document.getElementById('token-branch-id').value = branchId;
+      document.getElementById('token-service-id').value = serviceId;
+      document.getElementById('modal-service-name').textContent = `Join Queue: ${serviceName}`;
+      document.getElementById('modal-service-desc').textContent = serviceDesc || 'Select priority category and confirm to generate your live digital token.';
+
+      if (!tokenModalInstance) {
+        tokenModalInstance = new bootstrap.Modal(document.getElementById('tokenModal'));
+      }
+      tokenModalInstance.show();
+    }
+
+    async function loadOrgAndBranches() {
+      try {
+        const res = await window.API.get(`/organizations/${orgId}`);
+        const org = res.data;
+
+        // Header
+        document.getElementById('org-header').innerHTML = `
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-primary text-uppercase">${org.category}</span>
+                <span class="badge bg-success-subtle text-success">Verified Platform Member</span>
+              </div>
+              <h2 class="fw-bold mb-1">${org.name}</h2>
+              <p class="text-muted small mb-0"><i class="bi bi-geo-alt me-1"></i>${org.address || 'Address registered'} • <i class="bi bi-telephone ms-2 me-1"></i>${org.contact_phone || 'Support available'}</p>
+            </div>
+            <a href="public-queue.html?orgId=${org.id}" class="btn btn-outline-primary d-none d-md-flex align-items-center gap-1">
+              <i class="bi bi-display"></i> Open Live Hall Display
+            </a>
+          </div>
+        `;
+
+        const branches = org.branches || [];
+        const services = org.services || [];
+        const container = document.getElementById('branches-container');
+
+        if (branches.length === 0) {
+          container.innerHTML = `<div class="col-12 alert alert-warning">No active branches configured for this organization yet.</div>`;
+          return;
+        }
+
+        container.innerHTML = branches.map(branch => {
+          const branchServices = services.filter(s => s.branch_id === branch.id);
+
+          return `
+            <div class="col-12">
+              <div class="card card-custom p-4">
+                <div class="d-flex justify-content-between align-items-center pb-3 border-bottom mb-3">
+                  <div>
+                    <h4 class="fw-bold mb-1">${branch.name}</h4>
+                    <span class="text-muted small"><i class="bi bi-geo-alt me-1"></i>${branch.address}, ${branch.city} • Code: <strong>${branch.code}</strong></span>
+                  </div>
+                  <span class="badge bg-success-subtle text-success px-3 py-1">Active Branch</span>
+                </div>
+
+                <h6 class="fw-bold text-uppercase small text-muted mb-3">Available Services & Live Queue Status</h6>
+                
+                <div class="row g-3">
+                  ${branchServices.length > 0 ? branchServices.map(srv => `
+                    <div class="col-md-6">
+                      <div class="border rounded-3 p-3 bg-light h-100 d-flex flex-column justify-content-between">
+                        <div>
+                          <div class="d-flex justify-content-between align-items-center mb-1">
+                            <h6 class="fw-bold text-primary mb-0">${srv.name}</h6>
+                            <span class="badge bg-primary-subtle text-primary">${srv.code}</span>
+                          </div>
+                          <p class="text-muted small mb-2">${srv.description || 'Standard counter service.'}</p>
+                          <div class="small text-muted mb-3">
+                            <i class="bi bi-clock me-1"></i>Avg Duration: ~${srv.avg_service_duration_min} mins
+                          </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                          <button class="btn btn-primary btn-sm flex-grow-1" onclick="openTokenModal(${branch.id}, ${srv.id}, '${srv.name.replace(/'/g, "\\'")}', '${(srv.description || '').replace(/'/g, "\\'")}')">
+                            <i class="bi bi-ticket-perforated me-1"></i>Get Token
+                          </button>
+                          <a href="appointments.html?branchId=${branch.id}&serviceId=${srv.id}" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-calendar-event me-1"></i>Book Slot
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  `).join('') : '<div class="col-12 text-muted small">No active services in this branch.</div>'}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+      } catch (err) {
+        document.getElementById('org-header').innerHTML = `<div class="alert alert-danger">Error: ${err.message}</div>`;
+      }
+    }
+
+    document.getElementById('token-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const branch_id = document.getElementById('token-branch-id').value;
+      const service_id = document.getElementById('token-service-id').value;
+      const priority_type = document.getElementById('token-priority').value;
+      const priority_reason = document.getElementById('token-priority-reason').value.trim();
+
+      const btnText = document.getElementById('token-btn-text');
+      const btnSpinner = document.getElementById('token-btn-spinner');
+      const submitBtn = document.getElementById('btn-submit-token');
+
+      try {
+        btnText.classList.add('d-none');
+        btnSpinner.classList.remove('d-none');
+        submitBtn.disabled = true;
+
+        const res = await window.API.post('/tokens', {
+          branch_id,
+          service_id,
+          priority_type,
+          priority_reason: priority_reason || null
+        });
+
+        if (res.success && res.data && res.data.token) {
+          window.API.showToast(`Token ${res.data.token.token_number} generated! Position: #${res.data.token.queue_position}`, 'success', 3000);
+          if (tokenModalInstance) tokenModalInstance.hide();
+          setTimeout(() => {
+            window.location.href = `token-details.html?id=${res.data.token.id}`;
+          }, 800);
+        }
+      } catch (err) {
+        window.API.showToast(err.message || 'Failed to generate token.', 'error');
+        btnText.classList.remove('d-none');
+        btnSpinner.classList.add('d-none');
+        submitBtn.disabled = false;
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadOrgAndBranches();
+      window.initAIAssistant('customer');
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Super Admin Command Center - QueueLess AI</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+
+  <div class="dashboard-wrapper">
+    <!-- Sidebar -->
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-header">
+        <a class="navbar-brand text-white" href="index.html">
+          <i class="bi bi-shield-check text-warning fs-3"></i>
+          <span>Super <span class="text-primary">Admin</span></span>
+        </a>
+      </div>
+      <ul class="sidebar-nav">
+        <li class="sidebar-item">
+          <a href="#tab-overview" class="sidebar-link active" onclick="switchSuperTab('overview')">
+            <i class="bi bi-speedometer2"></i>
+            <span>Platform Overview</span>
+          </a>
+        </li>
+        <li class="sidebar-item">
+          <a href="#tab-organizations" class="sidebar-link" onclick="switchSuperTab('organizations')">
+            <i class="bi bi-buildings"></i>
+            <span>Organizations</span>
+          </a>
+        </li>
+        <li class="sidebar-item">
+          <a href="#tab-audit" class="sidebar-link" onclick="switchSuperTab('audit')">
+            <i class="bi bi-journal-text"></i>
+            <span>Audit Logs</span>
+          </a>
+        </li>
+      </ul>
+      <div class="sidebar-footer">
+        <div class="d-flex align-items-center justify-content-between">
+          <div class="text-truncate me-2">
+            <div class="fw-bold text-white text-truncate" id="sidebar-admin-name">Platform Owner</div>
+            <div class="text-muted small">Super Administrator</div>
+          </div>
+          <button class="btn btn-sm btn-outline-danger p-1" onclick="window.AUTH.logout()" title="Logout"><i class="bi bi-box-arrow-right"></i></button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="dashboard-main">
+      <header class="dashboard-topbar">
+        <div class="d-flex align-items-center gap-3">
+          <button class="btn btn-sm btn-outline-secondary d-lg-none" onclick="document.querySelector('.dashboard-sidebar').classList.toggle('show')">
+            <i class="bi bi-list fs-5"></i>
+          </button>
+          <h5 class="fw-bold mb-0">Platform Governance & System Health</h5>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill fw-semibold" id="health-pill">
+            <i class="bi bi-check-circle-fill me-1"></i> System Healthy
+          </span>
+          <button class="btn btn-sm btn-outline-primary" onclick="loadOverview()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+        </div>
+      </header>
+
+      <div class="dashboard-content">
+
+        <!-- SECTION 1: OVERVIEW -->
+        <div id="super-section-overview">
+          <div class="row g-4 mb-4">
+            <div class="col-sm-6 col-xl-3">
+              <div class="stat-card">
+                <div class="stat-icon stat-blue"><i class="bi bi-buildings"></i></div>
+                <div>
+                  <div class="stat-value" id="s-stat-orgs">0</div>
+                  <div class="stat-label">Registered Organizations</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-sm-6 col-xl-3">
+              <div class="stat-card">
+                <div class="stat-icon stat-green"><i class="bi bi-people"></i></div>
+                <div>
+                  <div class="stat-value" id="s-stat-users">0</div>
+                  <div class="stat-label">Platform Users</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-sm-6 col-xl-3">
+              <div class="stat-card">
+                <div class="stat-icon stat-yellow"><i class="bi bi-ticket-perforated"></i></div>
+                <div>
+                  <div class="stat-value" id="s-stat-tokens">0</div>
+                  <div class="stat-label">Total Tokens Issued</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-sm-6 col-xl-3">
+              <div class="stat-card">
+                <div class="stat-icon stat-purple"><i class="bi bi-cpu"></i></div>
+                <div>
+                  <div class="stat-value" id="s-stat-uptime">0s</div>
+                  <div class="stat-label">Server Uptime</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pending Approvals Banner -->
+          <div class="card card-custom p-4 border-0 shadow-sm mb-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-hourglass-top text-warning me-2"></i>Pending Organization Approvals</h5>
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light small text-uppercase text-muted">
+                  <tr>
+                    <th>Organization</th>
+                    <th>Category</th>
+                    <th>Contact Email</th>
+                    <th>Submitted</th>
+                    <th class="text-end">Approval Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="pending-orgs-tbody">
+                  <tr><td colspan="5" class="text-center py-4 text-muted">Loading pending requests...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 2: ORGANIZATIONS MANAGEMENT -->
+        <div id="super-section-organizations" class="d-none">
+          <div class="card card-custom p-4 border-0 shadow-sm mb-4">
+            <h5 class="fw-bold mb-3">All Platform Organizations</h5>
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light small text-uppercase text-muted">
+                  <tr>
+                    <th>Organization</th>
+                    <th>Category</th>
+                    <th>Branches</th>
+                    <th>Staff</th>
+                    <th>Status</th>
+                    <th class="text-end">Manage</th>
+                  </tr>
+                </thead>
+                <tbody id="all-orgs-tbody">
+                  <tr><td colspan="6" class="text-center py-4 text-muted">Loading organizations...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 3: AUDIT LOGS -->
+        <div id="super-section-audit" class="d-none">
+          <div class="card card-custom p-4 border-0 shadow-sm mb-4">
+            <h5 class="fw-bold mb-3"><i class="bi bi-shield-check text-primary me-2"></i>System Security Audit Logs</h5>
+            <div class="table-responsive">
+              <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.85rem;">
+                <thead class="table-light text-muted">
+                  <tr><th>Timestamp</th><th>Action</th><th>User</th><th>Entity</th><th>IP Address</th></tr>
+                </thead>
+                <tbody id="audit-logs-tbody">
+                  <tr><td colspan="5" class="text-center py-4 text-muted">Loading audit trail...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    if (!window.AUTH.requireRole('super_admin')) {
+      // Stopped by guard
+    }
+
+    const user = window.AUTH.getUser();
+    if (user) {
+      document.getElementById('sidebar-admin-name').textContent = user.full_name;
+    }
+
+    function switchSuperTab(tab) {
+      document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+      document.querySelector(`a[href="#tab-${tab}"]`)?.classList.add('active');
+
+      document.getElementById('super-section-overview').classList.add('d-none');
+      document.getElementById('super-section-organizations').classList.add('d-none');
+      document.getElementById('super-section-audit').classList.add('d-none');
+
+      document.getElementById(`super-section-${tab}`).classList.remove('d-none');
+
+      if (tab === 'organizations') loadAllOrganizations();
+      if (tab === 'audit') loadAuditLogs();
+    }
+
+    async function loadOverview() {
+      try {
+        const res = await window.API.get('/super-admin/overview');
+        const { organizations, users, tokens, systemHealth } = res.data;
+
+        document.getElementById('s-stat-orgs').textContent = organizations.total_orgs || 0;
+        document.getElementById('s-stat-users').textContent = users.total_users || 0;
+        document.getElementById('s-stat-tokens').textContent = tokens.total_tokens || 0;
+        document.getElementById('s-stat-uptime').textContent = `${Math.floor(systemHealth.uptimeSeconds / 60)}m`;
+
+        // Load pending approvals
+        const pendingRes = await window.API.get('/super-admin/organizations?status=pending');
+        const pending = pendingRes.data || [];
+        const tbody = document.getElementById('pending-orgs-tbody');
+
+        if (pending.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="text-center py-3 text-muted">No pending organization registrations. All clear!</td></tr>';
+        } else {
+          tbody.innerHTML = pending.map(o => `
+            <tr>
+              <td class="fw-bold">${o.name}</td>
+              <td><span class="badge bg-light text-dark border text-uppercase">${o.category}</span></td>
+              <td>${o.contact_email}</td>
+              <td class="small text-muted">${new Date(o.created_at).toLocaleDateString()}</td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-success me-1" onclick="updateOrgStatus(${o.id}, 'approved')">
+                  <i class="bi bi-check-lg me-1"></i>Approve
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="updateOrgStatus(${o.id}, 'rejected')">
+                  Reject
+                </button>
+              </td>
+            </tr>
+          `).join('');
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function loadAllOrganizations() {
+      try {
+        const res = await window.API.get('/super-admin/organizations');
+        const list = res.data || [];
+        const tbody = document.getElementById('all-orgs-tbody');
+
+        const statusBadges = {
+          approved: 'bg-success',
+          pending: 'bg-warning text-dark',
+          suspended: 'bg-danger',
+          rejected: 'bg-secondary'
+        };
+
+        tbody.innerHTML = list.map(o => `
+          <tr>
+            <td class="fw-bold">${o.name}</td>
+            <td class="text-uppercase small text-muted">${o.category}</td>
+            <td>${o.branch_count || 0}</td>
+            <td>${o.member_count || 0}</td>
+            <td><span class="badge ${statusBadges[o.status] || 'bg-secondary'}">${o.status}</span></td>
+            <td class="text-end">
+              ${o.status === 'approved' ? `
+                <button class="btn btn-sm btn-outline-danger py-0" onclick="updateOrgStatus(${o.id}, 'suspended')">Suspend</button>
+              ` : `
+                <button class="btn btn-sm btn-outline-success py-0" onclick="updateOrgStatus(${o.id}, 'approved')">Activate</button>
+              `}
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function updateOrgStatus(id, status) {
+      if (!confirm(`Are you sure you want to mark this organization as ${status}?`)) return;
+      try {
+        await window.API.put(`/super-admin/organizations/${id}/status`, { status });
+        window.API.showToast(`Organization status changed to ${status}.`, 'success');
+        loadOverview();
+        loadAllOrganizations();
+      } catch (err) {
+        window.API.showToast(err.message, 'error');
+      }
+    }
+
+    async function loadAuditLogs() {
+      try {
+        const res = await window.API.get('/super-admin/audit-logs');
+        const logs = res.data || [];
+        const tbody = document.getElementById('audit-logs-tbody');
+
+        tbody.innerHTML = logs.map(l => `
+          <tr>
+            <td class="text-muted">${new Date(l.timestamp).toLocaleString()}</td>
+            <td><span class="badge bg-light text-primary border">${l.action}</span></td>
+            <td>${l.user_email || 'System'}</td>
+            <td>${l.entity} (#${l.entity_id})</td>
+            <td class="font-monospace text-muted">${l.ip_address || '::1'}</td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadOverview);
+  </script>
+</body>
+</html>

@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Appointments & Digital Check-In - QueueLess AI</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-light">
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top py-3">
+    <div class="container">
+      <a class="navbar-brand" href="index.html">
+        <i class="bi bi-clock-history text-primary fs-3"></i>
+        <span>QueueLess <span class="text-primary">AI</span></span>
+      </a>
+      <div class="d-flex align-items-center gap-3">
+        <a href="user-dashboard.html" class="btn btn-outline-primary btn-sm"><i class="bi bi-speedometer2 me-1"></i>My Dashboard</a>
+        <div id="nav-user-area"></div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="bg-white border-bottom py-4 mb-4">
+    <div class="container">
+      <h2 class="fw-bold mb-1">Book & Manage Appointments</h2>
+      <p class="text-muted mb-0">Reserve an advance service slot or perform digital check-in on arrival</p>
+    </div>
+  </div>
+
+  <div class="container pb-5">
+    <div class="row g-4">
+      <!-- Left: Booking Form -->
+      <div class="col-lg-5">
+        <div class="card card-custom p-4 border-0 shadow-sm">
+          <h5 class="fw-bold mb-3"><i class="bi bi-calendar-plus text-primary me-2"></i>Schedule Appointment</h5>
+
+          <form id="appointment-form">
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Organization</label>
+              <select id="appt-org-select" class="form-select" onchange="onOrgChange()" required>
+                <option value="">-- Choose Organization --</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Branch Location</label>
+              <select id="appt-branch-select" class="form-select" onchange="onBranchChange()" required disabled>
+                <option value="">-- Select Branch --</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Service</label>
+              <select id="appt-service-select" class="form-select" onchange="loadAvailableSlots()" required disabled>
+                <option value="">-- Select Service --</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Appointment Date</label>
+              <input type="date" id="appt-date" class="form-control" onchange="loadAvailableSlots()" required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Available Time Slots</label>
+              <div id="slots-container" class="d-flex flex-wrap gap-2 pt-1">
+                <span class="text-muted small">Select branch, service, and date to view slots.</span>
+              </div>
+              <input type="hidden" id="selected-slot" required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Special Notes / Reason</label>
+              <textarea id="appt-notes" class="form-control" rows="2" placeholder="e.g. Health checkup, loan document submission"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold" id="btn-book">
+              <span id="btn-book-text">Confirm Booking</span>
+              <span id="btn-book-spinner" class="spinner-border spinner-border-sm d-none"></span>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Right: My Appointments List -->
+      <div class="col-lg-7">
+        <div class="card card-custom p-4 border-0 shadow-sm">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold mb-0"><i class="bi bi-calendar-check text-success me-2"></i>My Scheduled Appointments</h5>
+            <button class="btn btn-sm btn-outline-secondary" onclick="loadMyAppointments()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+          </div>
+
+          <div id="appointments-list">
+            <div class="text-center py-4 text-muted">
+              <span class="spinner-border spinner-border-sm text-primary"></span> Loading appointments...
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/ai-assistant.js"></script>
+  <script>
+    let orgData = [];
+
+    // Restrict date picker to today and future
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('appt-date').min = today;
+    document.getElementById('appt-date').value = today;
+
+    async function initDropdowns() {
+      try {
+        const res = await window.API.get('/organizations');
+        orgData = res.data || [];
+        const select = document.getElementById('appt-org-select');
+        select.innerHTML = '<option value="">-- Choose Organization --</option>' + 
+          orgData.map(o => `<option value="${o.id}">${o.name} (${o.category})</option>`).join('');
+      } catch (err) {
+        console.error('Error fetching orgs:', err);
+      }
+    }
+
+    async function onOrgChange() {
+      const orgId = document.getElementById('appt-org-select').value;
+      const branchSelect = document.getElementById('appt-branch-select');
+      const serviceSelect = document.getElementById('appt-service-select');
+
+      branchSelect.innerHTML = '<option value="">-- Select Branch --</option>';
+      serviceSelect.innerHTML = '<option value="">-- Select Service --</option>';
+      branchSelect.disabled = true;
+      serviceSelect.disabled = true;
+
+      if (!orgId) return;
+
+      try {
+        const res = await window.API.get(`/branches?organization_id=${orgId}`);
+        const branches = res.data || [];
+        branchSelect.innerHTML = '<option value="">-- Select Branch --</option>' +
+          branches.map(b => `<option value="${b.id}">${b.name} (${b.city})</option>`).join('');
+        branchSelect.disabled = false;
+      } catch (err) {
+        window.API.showToast(err.message, 'error');
+      }
+    }
+
+    async function onBranchChange() {
+      const branchId = document.getElementById('appt-branch-select').value;
+      const serviceSelect = document.getElementById('appt-service-select');
+      serviceSelect.innerHTML = '<option value="">-- Select Service --</option>';
+      serviceSelect.disabled = true;
+
+      if (!branchId) return;
+
+      try {
+        const res = await window.API.get(`/services?branch_id=${branchId}`);
+        const services = res.data || [];
+        serviceSelect.innerHTML = '<option value="">-- Select Service --</option>' +
+          services.map(s => `<option value="${s.id}">${s.name} (~${s.avg_service_duration_min} min)</option>`).join('');
+        serviceSelect.disabled = false;
+        loadAvailableSlots();
+      } catch (err) {
+        window.API.showToast(err.message, 'error');
+      }
+    }
+
+    async function loadAvailableSlots() {
+      const branchId = document.getElementById('appt-branch-select').value;
+      const serviceId = document.getElementById('appt-service-select').value;
+      const date = document.getElementById('appt-date').value;
+      const container = document.getElementById('slots-container');
+
+      if (!branchId || !serviceId || !date) {
+        container.innerHTML = '<span class="text-muted small">Select branch, service, and date to view slots.</span>';
+        return;
+      }
+
+      container.innerHTML = '<span class="spinner-border spinner-border-sm text-primary"></span> Checking available slots...';
+
+      try {
+        const res = await window.API.get(`/appointments/slots?branch_id=${branchId}&service_id=${serviceId}&date=${date}`);
+        const data = res.data;
+
+        if (data.isClosed || data.holiday) {
+          container.innerHTML = `<span class="badge bg-danger-subtle text-danger">${data.holiday ? 'Holiday: ' + data.holiday : 'Branch is closed on this day'}</span>`;
+          return;
+        }
+
+        const slots = data.slots || [];
+        container.innerHTML = slots.map(s => `
+          <button type="button" 
+                  class="btn btn-sm ${s.isAvailable ? 'btn-outline-primary slot-btn' : 'btn-outline-secondary disabled'}" 
+                  ${!s.isAvailable ? 'disabled' : ''} 
+                  onclick="selectSlot(this, '${s.slot}')">
+            ${s.slot}
+          </button>
+        `).join('');
+      } catch (err) {
+        container.innerHTML = `<span class="text-danger small">Error: ${err.message}</span>`;
+      }
+    }
+
+    function selectSlot(btn, slot) {
+      document.querySelectorAll('.slot-btn').forEach(b => {
+        b.classList.remove('btn-primary');
+        b.classList.add('btn-outline-primary');
+      });
+      btn.classList.remove('btn-outline-primary');
+      btn.classList.add('btn-primary');
+      document.getElementById('selected-slot').value = slot;
+    }
+
+    document.getElementById('appointment-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!window.AUTH.requireAuth()) return;
+
+      const branch_id = document.getElementById('appt-branch-select').value;
+      const service_id = document.getElementById('appt-service-select').value;
+      const appointment_date = document.getElementById('appt-date').value;
+      const time_slot = document.getElementById('selected-slot').value;
+      const notes = document.getElementById('appt-notes').value.trim();
+
+      if (!time_slot) {
+        window.API.showToast('Please pick an available time slot.', 'warning');
+        return;
+      }
+
+      const btnText = document.getElementById('btn-book-text');
+      const btnSpinner = document.getElementById('btn-book-spinner');
+      const submitBtn = document.getElementById('btn-book');
+
+      try {
+        btnText.classList.add('d-none');
+        btnSpinner.classList.remove('d-none');
+        submitBtn.disabled = true;
+
+        await window.API.post('/appointments', {
+          branch_id,
+          service_id,
+          appointment_date,
+          time_slot,
+          notes
+        });
+
+        window.API.showToast('Appointment successfully scheduled!', 'success');
+        document.getElementById('appt-notes').value = '';
+        document.getElementById('selected-slot').value = '';
+        loadAvailableSlots();
+        loadMyAppointments();
+      } catch (err) {
+        window.API.showToast(err.message || 'Booking conflict or error.', 'error');
+      } finally {
+        btnText.classList.remove('d-none');
+        btnSpinner.classList.add('d-none');
+        submitBtn.disabled = false;
+      }
+    });
+
+    async function loadMyAppointments() {
+      const container = document.getElementById('appointments-list');
+      if (!window.AUTH.isAuthenticated()) {
+        container.innerHTML = `
+          <div class="text-center py-4">
+            <i class="bi bi-lock text-muted fs-3"></i>
+            <p class="text-muted small mt-2">Sign in to view your scheduled appointments.</p>
+            <a href="login.html" class="btn btn-outline-primary btn-sm">Log In</a>
+          </div>
+        `;
+        return;
+      }
+
+      try {
+        const res = await window.API.get('/appointments/my-appointments');
+        const list = res.data || [];
+
+        if (list.length === 0) {
+          container.innerHTML = '<div class="text-center py-4 text-muted small">No upcoming or past appointments found.</div>';
+          return;
+        }
+
+        container.innerHTML = list.map(a => {
+          const isToday = a.appointment_date === today;
+          const isBooked = a.status === 'booked';
+          const isCheckedIn = a.status === 'checked_in';
+
+          return `
+            <div class="p-3 border rounded-3 mb-3 bg-light d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+              <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <span class="badge ${isBooked ? 'bg-primary' : (isCheckedIn ? 'bg-success' : 'bg-secondary')} text-uppercase">${a.status}</span>
+                  <span class="fw-bold text-dark">${a.organization_name}</span>
+                </div>
+                <h6 class="fw-bold text-primary mb-1">${a.service_name}</h6>
+                <div class="small text-muted">
+                  <i class="bi bi-calendar3 me-1"></i>${a.appointment_date} at <strong>${a.time_slot}</strong>
+                </div>
+                <div class="small text-muted"><i class="bi bi-geo-alt me-1"></i>${a.branch_name}</div>
+                ${a.checked_in_token_number ? `
+                  <div class="mt-2"><a href="token-details.html?id=${a.checked_in_token_id}" class="badge bg-success text-white py-1 px-2 text-decoration-none"><i class="bi bi-ticket-perforated me-1"></i>Active Token: ${a.checked_in_token_number}</a></div>
+                ` : ''}
+              </div>
+
+              <div class="d-flex flex-wrap gap-2 align-items-center">
+                ${isBooked && isToday ? `
+                  <button class="btn btn-success btn-sm fw-semibold" onclick="digitalCheckIn(${a.id})">
+                    <i class="bi bi-qr-code me-1"></i>Check-in Now
+                  </button>
+                ` : ''}
+                ${isBooked ? `
+                  <button class="btn btn-outline-danger btn-sm" onclick="cancelAppt(${a.id})">
+                    Cancel
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        container.innerHTML = `<div class="alert alert-danger small">Error: ${err.message}</div>`;
+      }
+    }
+
+    async function digitalCheckIn(appointmentId) {
+      if (!confirm('Perform digital check-in to generate your live queue token immediately?')) return;
+      try {
+        const res = await window.API.post(`/appointments/${appointmentId}/check-in`);
+        window.API.showToast(`Checked in! Token: ${res.data.tokenNumber}`, 'success');
+        setTimeout(() => {
+          window.location.href = `token-details.html?id=${res.data.tokenId}`;
+        }, 800);
+      } catch (err) {
+        window.API.showToast(err.message || 'Check-in failed.', 'error');
+      }
+    }
+
+    async function cancelAppt(appointmentId) {
+      if (!confirm('Are you sure you want to cancel this appointment?')) return;
+      try {
+        await window.API.del(`/appointments/${appointmentId}`);
+        window.API.showToast('Appointment cancelled.', 'info');
+        loadMyAppointments();
+        loadAvailableSlots();
+      } catch (err) {
+        window.API.showToast(err.message, 'error');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initDropdowns();
+      loadMyAppointments();
+      window.initAIAssistant('customer');
+    });
+  </script>
+</body>
+</html>

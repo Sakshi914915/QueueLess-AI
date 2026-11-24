@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Staff Counter Desk - QueueLess AI</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+
+  <div class="dashboard-wrapper">
+    <!-- Sidebar -->
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-header">
+        <a class="navbar-brand text-white" href="index.html">
+          <i class="bi bi-clock-history text-primary fs-3"></i>
+          <span>QueueLess <span class="text-primary">AI</span></span>
+        </a>
+      </div>
+      <ul class="sidebar-nav">
+        <li class="sidebar-item">
+          <a href="staff-dashboard.html" class="sidebar-link active">
+            <i class="bi bi-person-workspace"></i>
+            <span>Counter Desk</span>
+          </a>
+        </li>
+        <li class="sidebar-item">
+          <a href="public-queue.html" class="sidebar-link" target="_blank">
+            <i class="bi bi-display"></i>
+            <span>Public TV Display</span>
+          </a>
+        </li>
+      </ul>
+      <div class="sidebar-footer">
+        <div class="d-flex align-items-center justify-content-between">
+          <div class="text-truncate me-2">
+            <div class="fw-bold text-white text-truncate" id="sidebar-staff-name">Staff</div>
+            <div class="text-muted small text-truncate" id="sidebar-staff-branch">Branch Desk</div>
+          </div>
+          <button class="btn btn-sm btn-outline-danger p-1" onclick="window.AUTH.logout()" title="Logout"><i class="bi bi-box-arrow-right"></i></button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="dashboard-main">
+      <!-- Topbar -->
+      <header class="dashboard-topbar">
+        <div class="d-flex align-items-center gap-3">
+          <button class="btn btn-sm btn-outline-secondary d-lg-none" onclick="document.querySelector('.dashboard-sidebar').classList.toggle('show')">
+            <i class="bi bi-list fs-5"></i>
+          </button>
+          <h5 class="fw-bold mb-0" id="topbar-counter-info">Counter Operator Desk</h5>
+        </div>
+
+        <div class="d-flex align-items-center gap-3">
+          <!-- Counter Status Pill -->
+          <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill fw-semibold" id="counter-status-pill">
+            <i class="bi bi-circle-fill me-1" style="font-size:0.5rem;"></i> Counter Active
+          </span>
+          <!-- Walk-in Token Generator Modal Trigger -->
+          <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#walkinModal">
+            <i class="bi bi-person-plus me-1"></i> Issue Walk-in Token
+          </button>
+        </div>
+      </header>
+
+      <div class="dashboard-content">
+
+        <!-- Serving Token Spotlight & Controls -->
+        <div class="row g-4 mb-4">
+          <div class="col-lg-6">
+            <div class="card card-custom p-4 border-0 shadow-sm h-100 bg-white" id="serving-card">
+              <div class="d-flex justify-content-between align-items-center pb-3 border-bottom mb-3">
+                <span class="small fw-bold text-uppercase text-muted">Currently Attending</span>
+                <span class="badge badge-status" id="serving-status-badge">Idle</span>
+              </div>
+
+              <div class="text-center py-4 my-auto">
+                <div class="small text-muted mb-1">SERVING TOKEN NUMBER</div>
+                <div class="display-3 fw-black text-primary my-1" id="current-token-number">--</div>
+                <h5 class="fw-bold text-dark" id="current-customer-name">No Customer at Desk</h5>
+                <div class="badge bg-light text-muted border px-3 py-1 mt-1" id="current-service-name">Ready for Next Call</div>
+              </div>
+
+              <!-- Action Controls -->
+              <div class="pt-3 border-top d-flex flex-wrap gap-2 justify-content-center" id="counter-action-buttons">
+                <button class="btn btn-primary px-4 py-2 fw-semibold" id="btn-call-next" onclick="callNext()">
+                  <i class="bi bi-megaphone me-1"></i> Call Next Token
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Counter Daily Statistics -->
+          <div class="col-lg-6">
+            <div class="card card-custom p-4 border-0 shadow-sm h-100 bg-white">
+              <h5 class="fw-bold mb-3"><i class="bi bi-bar-chart text-primary me-2"></i>Desk Performance & Queue Status</h5>
+              
+              <div class="row g-3 mb-3">
+                <div class="col-6">
+                  <div class="p-3 bg-light rounded-3 border">
+                    <div class="small text-muted">Served Today</div>
+                    <div class="fs-3 fw-bold text-success" id="stat-desk-served">0</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="p-3 bg-light rounded-3 border">
+                    <div class="small text-muted">Waiting in Line</div>
+                    <div class="fs-3 fw-bold text-primary" id="stat-desk-waiting">0</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Internal Desk Notes -->
+              <div class="mt-auto">
+                <label class="form-label small fw-semibold">Internal Service Note (Attached upon completion)</label>
+                <textarea id="staff-internal-note" class="form-control form-control-sm" rows="3" placeholder="Notes on customer requirements, issues resolved, or internal comments..."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Waiting Queue Table -->
+        <div class="card card-custom p-4 border-0 shadow-sm mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h5 class="fw-bold mb-0">Waiting Queue Line</h5>
+              <span class="text-muted small">Sorted transparently by priority weight (Emergency -> Disability -> Senior -> Normal) and FIFO creation time</span>
+            </div>
+            <button class="btn btn-sm btn-outline-secondary" onclick="loadQueue()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light small text-uppercase text-muted">
+                <tr>
+                  <th>Pos</th>
+                  <th>Token #</th>
+                  <th>Service Desk</th>
+                  <th>Customer</th>
+                  <th>Priority</th>
+                  <th>Est. Wait</th>
+                  <th>Created</th>
+                  <th class="text-end">Quick Actions</th>
+                </tr>
+              </thead>
+              <tbody id="waiting-queue-tbody">
+                <tr><td colspan="8" class="text-center py-4 text-muted">Loading queue data from MySQL...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal: Issue Walk-In Token -->
+  <div class="modal fade" id="walkinModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header border-bottom bg-light">
+          <h5 class="modal-title fw-bold">Issue Walk-In Customer Token</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <form id="walkin-form">
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Customer Name</label>
+              <input type="text" id="walkin-name" class="form-control" placeholder="e.g. Ramesh Patel" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Phone Number</label>
+              <input type="tel" id="walkin-phone" class="form-control" placeholder="+91 9876543210">
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Priority Category</label>
+              <select id="walkin-priority" class="form-select">
+                <option value="normal">Normal</option>
+                <option value="senior">Senior Citizen</option>
+                <option value="disability">Differently Abled</option>
+                <option value="emergency">Emergency Case</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">Generate Walk-in Token</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Transfer Token -->
+  <div class="modal fade" id="transferModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header border-bottom bg-light">
+          <h5 class="modal-title fw-bold">Transfer Token to Another Desk</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <form id="transfer-form">
+            <input type="hidden" id="transfer-token-id">
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Target Service</label>
+              <select id="transfer-service-select" class="form-select" required></select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Transfer Note / Reason</label>
+              <input type="text" id="transfer-notes" class="form-control" placeholder="e.g. Sent for blood sample collection" required>
+            </div>
+            <button type="submit" class="btn btn-warning w-100 py-2 fw-semibold">Confirm Transfer</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/socket.js"></script>
+  <script src="js/i18n.js"></script>
+  <script>
+    if (!window.AUTH.requireRole('staff', 'org_admin', 'super_admin')) {
+      // Stopped by guard
+    }
+
+    const user = window.AUTH.getUser();
+    let currentServingToken = null;
+    let branchId = user?.branch?.id || 1;
+    let counterId = user?.counter?.id || 1;
+    let serviceId = user?.counter?.service_id || null;
+
+    if (user) {
+      document.getElementById('sidebar-staff-name').textContent = user.full_name;
+      document.getElementById('sidebar-staff-branch').textContent = user.branch ? user.branch.name : 'Counter Desk';
+      document.getElementById('topbar-counter-info').textContent = user.counter 
+        ? `${user.branch.name} — ${user.counter.name}` 
+        : 'Counter Operator Desk';
+    }
+
+    async function loadQueue() {
+      try {
+        const res = await window.API.get(`/queue/${branchId}/${serviceId || 'all'}`);
+        const { servingTokens, waitingQueue, totalWaiting } = res.data;
+
+        document.getElementById('stat-desk-waiting').textContent = totalWaiting;
+
+        // Check if counter has serving token
+        const deskToken = servingTokens.find(t => t.counter_id === counterId) || null;
+        currentServingToken = deskToken;
+        renderServingUI(deskToken);
+
+        // Render Waiting Queue Table
+        const tbody = document.getElementById('waiting-queue-tbody');
+        if (waitingQueue.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No customers currently waiting in queue.</td></tr>';
+          return;
+        }
+
+        const priorityBadge = {
+          emergency: '<span class="badge bg-danger">Emergency</span>',
+          disability: '<span class="badge bg-warning text-dark">Differently Abled</span>',
+          senior: '<span class="badge bg-info text-dark">Senior</span>',
+          normal: '<span class="badge bg-light text-dark border">Normal</span>'
+        };
+
+        tbody.innerHTML = waitingQueue.map(t => `
+          <tr>
+            <td class="fw-bold text-primary">#${t.queue_position}</td>
+            <td class="fw-bold fs-6">${t.token_number}</td>
+            <td>${t.service_name}</td>
+            <td>${t.walkin_name || t.customer_name || 'Walk-in Customer'}</td>
+            <td>${priorityBadge[t.priority_type] || priorityBadge.normal}</td>
+            <td>~${t.estimated_wait_minutes} min</td>
+            <td class="small text-muted">${new Date(t.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="callSpecificToken(${t.id})">
+                Call
+              </button>
+            </td>
+          </tr>
+        `).join('');
+
+      } catch (err) {
+        console.error('Error loading queue:', err);
+      }
+    }
+
+    function renderServingUI(t) {
+      const numberEl = document.getElementById('current-token-number');
+      const nameEl = document.getElementById('current-customer-name');
+      const serviceEl = document.getElementById('current-service-name');
+      const badgeEl = document.getElementById('serving-status-badge');
+      const actionsEl = document.getElementById('counter-action-buttons');
+
+      if (!t) {
+        numberEl.textContent = '--';
+        nameEl.textContent = 'No Customer at Desk';
+        serviceEl.textContent = 'Ready for Next Call';
+        badgeEl.textContent = 'Idle';
+        badgeEl.className = 'badge bg-secondary';
+        actionsEl.innerHTML = `
+          <button class="btn btn-primary px-4 py-2 fw-semibold" id="btn-call-next" onclick="callNext()">
+            <i class="bi bi-megaphone me-1"></i> Call Next Token
+          </button>
+        `;
+        return;
+      }
+
+      numberEl.textContent = t.token_number;
+      nameEl.textContent = t.customer_name || 'Walk-in Customer';
+      serviceEl.textContent = t.service_name;
+      badgeEl.textContent = t.status.toUpperCase();
+      badgeEl.className = `badge badge-status ${t.status === 'called' ? 'badge-called' : 'badge-serving'}`;
+
+      if (t.status === 'called') {
+        actionsEl.innerHTML = `
+          <button class="btn btn-success px-3 py-2 fw-semibold" onclick="markServing(${t.id})">
+            <i class="bi bi-person-check me-1"></i> Mark Serving
+          </button>
+          <button class="btn btn-warning px-3 py-2 fw-semibold" onclick="skipToken(${t.id})">
+            <i class="bi bi-skip-forward me-1"></i> Skip
+          </button>
+          <button class="btn btn-outline-secondary px-3 py-2" onclick="markNoShow(${t.id})">
+            No-Show
+          </button>
+        `;
+      } else if (t.status === 'serving') {
+        actionsEl.innerHTML = `
+          <button class="btn btn-success px-4 py-2 fw-semibold" onclick="completeToken(${t.id})">
+            <i class="bi bi-check2-all me-1"></i> Complete Service
+          </button>
+          <button class="btn btn-outline-warning px-3 py-2 fw-semibold" onclick="openTransferModal(${t.id})">
+            <i class="bi bi-arrow-left-right me-1"></i> Transfer
+          </button>
+        `;
+      }
+    }
+
+    async function callNext() {
+      try {
+        const res = await window.API.post('/queue/call-next', {
+          counter_id: counterId,
+          branch_id: branchId,
+          service_id: serviceId
+        });
+        window.API.showToast(res.message, 'success');
+        loadQueue();
+      } catch (err) {
+        window.API.showToast(err.message, 'warning');
+      }
+    }
+
+    async function markServing(tokenId) {
+      try {
+        await window.API.post(`/queue/${tokenId}/serving`);
+        window.API.showToast('Token marked as serving.', 'info');
+        loadQueue();
+      } catch (err) {
+        window.API.showToast(err.message, 'error');
+      }
+    }
+
+    async function completeToken(tokenId) {
+      const note = document.getElementById('staff-internal-note').value.trim();
+      try {
+        await window.API.post(`/queue/${tokenId}/complete`, { internal_notes: note });
+        window.API.showToast('Service completed successfully.', 'success');
+        document.getElementById('staff-internal-note').value = '';
+        const servedEl = document.getElementById('stat-desk-served');
+        servedEl.textContent = parseInt(servedEl.textContent, 10) + 1;
+        loadQueue();
+      } catch (err) {
+        window.API.showToast(err.message, 'error');
+      }
+    }
+
+    async function skipToken(tokenId) {
+      try {
+        await window.API.post(`/queue/${tokenId}/skip`);
+        window.API.showToast('Token skipped.', 'info');
+        loadQueue();
+      } catch (err) {
+        window.API.showToast(err.message, 'error');
+      }
+    }
+
+    async function markNoShow(tokenId) {
+      if (!confirm('Mark customer as no-show?')) return;
+      try {
+        await window.API.post(`/queue/${tokenId}/no-show`);
+        window.API.showToast('Marked as no-show.', 'info');
+        loadQueue();
+      } catch (err) {
+        window.API.showToast(err.message, 'error');
+      }
+    }
+
+    async function openTransferModal(tokenId) {
+      document.getElementById('transfer-token-id').value = tokenId;
+      try {
+        const res = await window.API.get(`/services?branch_id=${branchId}`);
+        const services = res.data || [];
+        const select = document.getElementById('transfer-service-select');
+        select.innerHTML = services.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+        new bootstrap.Modal(document.getElementById('transferModal')).show();
+      } catch (err) {
+        window.API.showToast(err.message, 'error');
+      }
+    }
+
+    document.getElementById('transfer-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const tokenId = document.getElementById('transfer-token-id').value;
+      const target_service_id = document.getElementById('transfer-service-select').value;
+      const transfer_notes = document.getElementById('transfer-notes').value.trim();
+
+      try {
+        await window.API.post(`/queue/${tokenId}/transfer`, {
+          target_service_id,
+          transfer_notes
+        });
+        window.API.showToast('Token transferred.', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('transferModal')).hide();
+        loadQueue();
+      } catch (err) {
+        window.API.showToast(err.message, 'error');
+      }
+    });
+
+    document.getElementById('walkin-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const walkin_name = document.getElementById('walkin-name').value.trim();
+      const walkin_phone = document.getElementById('walkin-phone').value.trim();
+      const priority_type = document.getElementById('walkin-priority').value;
+
+      try {
+        const res = await window.API.post('/tokens', {
+          branch_id: branchId,
+          service_id: serviceId || 1,
+          walkin_name,
+          walkin_phone,
+          priority_type
+        });
+        window.API.showToast(`Walk-in Token Issued: ${res.data.token.token_number}`, 'success');
+        document.getElementById('walkin-name').value = '';
+        document.getElementById('walkin-phone').value = '';
+        bootstrap.Modal.getInstance(document.getElementById('walkinModal')).hide();
+        loadQueue();
+      } catch (err) {
+        window.API.showToast(err.message, 'error');
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadQueue();
+      if (window.SOCKET) {
+        window.SOCKET.joinBranch(branchId);
+        const s = window.SOCKET.get();
+        if (s) {
+          s.on('queue_updated', () => loadQueue());
+          s.on('token_status_changed', () => loadQueue());
+        }
+      }
+    });
+  </script>
+</body>
+</html>
